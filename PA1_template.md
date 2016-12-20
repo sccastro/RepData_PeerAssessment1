@@ -5,40 +5,37 @@
 
 # -Loading and preprocessing the data
 ***
-First we'll set the working directory and load the <b>activity.csv</b> file.    
+First we'll set the working directory and load the <b>activity.csv</b> file.
+1. Load the data (i.e. read.csv())
 
 ```r
 setwd('~/Documents/RepData_PeerAssessment1')
 activity <- read.csv("activity.csv", header=TRUE)
 ```
-
-We will pre-process the file as follows:  
-1. Convert the character date column to a POSIX date in YYYY-MM-DD format.  
-2. Convert the integer interval column to a new POSIX time column in HH:MM:SS format.  
+2. Process/transform the data (if necessary) into a format suitable for your analysis
+<ul>  
+<li>Convert the character date column to a lubridate date in YYYY-MM-DD format.</li>  
+</ul>
 
 ```r
-# convert character date to POSIX date
-activity$date <- as.POSIXct(strptime(activity$date, "%Y-%m-%d"),tz="")
-# first convert integer time to character and pad with leading zeros...
-activity$time     <- sprintf("%04d", activity$interval)#C style language, fill in leading zeros
-# ...then convert to the date type
-activity$time     <- as.POSIXct(activity$time, "%H%M",tz="")
+# Change the interval column to a Date in a new column "time"
+activity <- activity %>%
+  mutate(date = ymd(date))
 ```
-
-Let's display some of the data and the structure of the data frame after pre-processing.
+Here's the structure of the data after preprocessing:
 
 ```r
 head(activity)
 ```
 
 ```
-##   steps       date interval                time
-## 1    NA 2012-10-01        0 2016-12-19 00:00:00
-## 2    NA 2012-10-01        5 2016-12-19 00:05:00
-## 3    NA 2012-10-01       10 2016-12-19 00:10:00
-## 4    NA 2012-10-01       15 2016-12-19 00:15:00
-## 5    NA 2012-10-01       20 2016-12-19 00:20:00
-## 6    NA 2012-10-01       25 2016-12-19 00:25:00
+##   steps       date interval
+## 1    NA 2012-10-01        0
+## 2    NA 2012-10-01        5
+## 3    NA 2012-10-01       10
+## 4    NA 2012-10-01       15
+## 5    NA 2012-10-01       20
+## 6    NA 2012-10-01       25
 ```
 
 ```r
@@ -46,93 +43,86 @@ str(activity)
 ```
 
 ```
-## 'data.frame':	17568 obs. of  4 variables:
+## 'data.frame':	17568 obs. of  3 variables:
 ##  $ steps   : int  NA NA NA NA NA NA NA NA NA NA ...
-##  $ date    : POSIXct, format: "2012-10-01" "2012-10-01" ...
+##  $ date    : Date, format: "2012-10-01" "2012-10-01" ...
 ##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
-##  $ time    : POSIXct, format: "2016-12-19 00:00:00" "2016-12-19 00:05:00" ...
 ```
+
 ***
+
 # -What is mean total number of steps taken per day?
-===
-To answer this question, we'll use aggregate() to create a new data frame.  The data frame will contain two columns:  
-1. date; and  
-2. total steps for each date.  
-We will ignore the missing values in the data set.  
+***
+For this part of the assignment, you can ignore the missing values in the dataset.
+1. Make a histogram of the total number of steps taken each day
+2. Calculate and report the <b>mean</b> and <b>median</b> total number of steps taken per day
+In order to find the mean number of steps by day, we will create the dataframe <b>avg_steps</b> with colums <b>date</b> and <b>steps</b>  
 
 ```r
-total_steps_by_date <- aggregate(list(total_steps = activity$steps),
-                                 by=list(date = activity$date),
-                                 FUN=sum,
-                                 na.rm=TRUE)
+avg_steps <- activity %>%
+  group_by(date) %>%
+  summarize(total_steps = sum(steps))
 ```
-The histograms below show the distribution of total steps (frequency and density).
+The histograms below visualize the distribution of total steps (frequency and density).
 
 ```r
-# In order to avoid waring of Hebrew characters occurs, 
-# use windows() function to set width and height in advance
-options(device = function(file, width = 7, height = 7, ...) {
-windows(width = width, height = height, ...)
- })
-
-par(mfrow=c(1,2))# 1 row, 2 columns
 # frequencies
-hist(total_steps_by_date$total_steps,
-     breaks=30,
-     xlab="Total Steps",
-     main="Total Steps Per Day",
-     col="lightblue")
+fplot <- ggplot(avg_steps, aes(total_steps)) + 
+  geom_histogram(breaks = seq(0,21194, by = 1000), fill = "black", alpha=.6, col = "black") +
+  my.axis.font + theme_minimal() +
+  labs(title = "Total Steps Per Day") + xlab("Daily Steps") + 
+     theme(plot.title = element_text(hjust = 0.5)) + my.theme
+
 # desnsity
-plot(density(total_steps_by_date$total_steps,
-             na.rm=TRUE),
-     xlab="Total Steps",
-     ylab="Density",
-     main="Total Steps Per Day",     
-     col="purple",
-     lwd=3)
+dplot <- ggplot(avg_steps, aes(total_steps)) + 
+  geom_density() + my.axis.font + theme_minimal() +
+  labs(title = "Total Steps Per Day") + xlab("Daily Steps") + 
+     theme(plot.title = element_text(hjust = 0.5)) + my.theme
+
+ggplot2.multiplot(fplot,dplot, cols=2)
 ```
 
 <img src="Figs/unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
-
-```r
-par(mfrow=c(1,1))
-```
 Finally, we'll calculate the mean and median number of steps per day.  
 
 ```r
-mean(total_steps_by_date$total_steps)
+mean(avg_steps$total_steps,na.rm = T)
 ```
 
 ```
-## [1] 9354.23
+## [1] 10766.19
 ```
 
 ```r
-median(total_steps_by_date$total_steps,na.rm=T)
+median(avg_steps$total_steps,na.rm=T)
 ```
 
 ```
-## [1] 10395
+## [1] 10765
 ```
+
 ***
+
 # -What is the average daily activity pattern?
 ***
-First we'll use the aggregate() function to obtain the average number of steps for each time interval.  With the result, we can draw a time series plot showing time interval on the x-axis and mean number of steps for the time interval on the y-axis.   
+1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+First we'll use the dplyr's summarize function to get the average number of steps for each time interval.  Then we'll can draw a time series plot showing time interval on the x-axis and mean number of steps for the time interval on the y-axis.   
 
 ```r
-average_steps_by_time <- aggregate(list(average_steps = activity$steps),
-                                   by=list(time = activity$time,
-                                           interval = activity$interval),
-                                   FUN=mean,
-                                   na.rm=TRUE)
-plot(average_steps ~ time,
-     data=average_steps_by_time,
-     xlab="Time interval",
-     ylab="Mean steps",
-     main="Mean Steps By Time Interval",
-     type="l",
-     col="blue",
-     lwd=2)
+par(mfrow = c(1,1))
+avg_steps_by_time <- activity %>%
+  na.omit() %>%
+  group_by(interval) %>%
+  summarize(mean.steps = mean(steps, na.rm = T), med.steps = median(steps, na.rm = T)) %>%
+  mutate(mean.steps = round(mean.steps), med.steps = round(med.steps))
+
+aplot <- ggplot(avg_steps_by_time, aes(x = interval, y = mean.steps)) + 
+  geom_line() + my.axis.font + theme_minimal() +
+  labs(title = "Average Steps Per Day \n by Time Interval") + xlab("Time Interval") + 
+     theme(plot.title = element_text(hjust = 0.5)) + my.theme
+aplot
 ```
 
 <img src="Figs/unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
@@ -140,166 +130,123 @@ plot(average_steps ~ time,
 Next, we determine the time interval with the maximum average number of steps.  
 
 ```r
-average_steps_by_time[which.max(average_steps_by_time$average_steps),]
+avg_steps_by_time %>%
+  filter(mean.steps == max(mean.steps))
 ```
 
 ```
-##                    time interval average_steps
-## 104 2016-12-19 08:35:00      835      206.1698
+## # A tibble: 1 × 3
+##   interval mean.steps med.steps
+##      <int>      <dbl>     <dbl>
+## 1      835        206        19
 ```
+The time interval with the maximum number of steps in a day on average is 835.
+
 ***
+
 # -Imputing missing values
 ***
+1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+4. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
 First, obtain a count of missing values in the steps column.  
 
 ```r
-sum(is.na(activity[,"steps"]))
+activity %>%
+  summarise(na_in_steps = sum(is.na(steps)))
 ```
 
 ```
-## [1] 2304
+##   na_in_steps
+## 1        2304
 ```
-For an imputed value, use the average number of steps for the time interval, obtained above.  To do this, we'll merge the original data frame with the data frame containing average steps by interval to form a third, new data frame.  We'll impute values for the NA's in the new data frame.  
+We'll use the mean steps for the time interval for an imputed value.  First, we'll need to join the <b>activity</b> data frame with <b>avg_steps_by_time</b> data frame to make a new one called <b>imp_act</b>.  We'll impute values for the NA's in the new data frame.  
 
 ```r
-# "join" the two data frames using merge()
-activity_imputed <- merge(activity,average_steps_by_time,by="interval")
+# "join" the two data frames using inner_join()
+imp_act <-inner_join(activity,avg_steps_by_time,by="interval")
 # correct the NA steps with average steps for the interval
-activity_imputed <- within(activity_imputed,
-                           steps <- ifelse(is.na(activity_imputed$steps),
-                           activity_imputed$average_steps,
-                           activity_imputed$steps))
+imp_act1 <- imp_act %>%
+  mutate(steps = ifelse(is.na(imp_act$steps),
+                  imp_act$mean.steps,
+                  imp_act$steps))
 ```
-Now calculate the total number of steps per day with the imputed values.
+Now we can recalculate steps per day:
 
 ```r
-total_steps_by_date_imputed <- aggregate(list(total_steps = activity_imputed$steps),
-                                         by=list(date = activity_imputed$date),
-                                         FUN=sum,
-                                         na.rm=FALSE)
+avg_steps_imp <- imp_act1 %>%
+  group_by(date) %>%
+  summarize(total_steps = sum(steps))
 ```
-Draw histograms showing the distribution of total steps (frequency and density) with the imputed values.
-
-```r
-par(mfrow=c(1,2))
-# frequencies
-hist(total_steps_by_date_imputed$total_steps,
-     breaks=30,
-     xlab="Total Steps",
-     main="Total Steps Per Day",
-     col="lightblue")
-# desnsity
-plot(density(total_steps_by_date_imputed$total_steps,
-             na.rm=TRUE),
-     xlab="Total Steps",
-     ylab="Density",
-     main="Total Steps Per Day",     
-     col="purple",
-     lwd=3)
-```
-
-<img src="Figs/unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
+and show histograms of total steps (frequency and density).
 
 ```r
 par(mfrow=c(1,1))
+fplot2 <- ggplot(avg_steps_imp, aes(total_steps)) + 
+  geom_histogram(breaks = seq(0,21194, by = 1000), fill = "black", alpha=.6, col = "black") +
+  my.axis.font + theme_minimal() +
+  labs(title = "Total Steps Per Day") + xlab("Daily Steps") + 
+     theme(plot.title = element_text(hjust = 0.5)) + my.theme
+
+# desnsity
+dplot2 <- ggplot(avg_steps_imp, aes(total_steps)) + 
+  geom_density() + my.axis.font + theme_minimal() +
+  labs(title = "Total Steps Per Day") + xlab("Daily Steps") + 
+     theme(plot.title = element_text(hjust = 0.5)) + my.theme
+
+
+ggplot2.multiplot(fplot2,dplot2, cols=2)
 ```
+
+<img src="Figs/unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
 Finally, we'll calculate the mean and median number of steps per day.  
 
 ```r
-mean(total_steps_by_date_imputed$total_steps)
+mean(avg_steps_imp$total_steps)
 ```
 
 ```
-## [1] 10766.19
+## [1] 10765.64
 ```
 
 ```r
-median(total_steps_by_date_imputed$total_steps)
+median(avg_steps_imp$total_steps)
 ```
 
 ```
-## [1] 10766.19
+## [1] 10762
 ```
-The mean and median total number of steps are now equal to one another (!!!) and higher with the imputed values.  Estimates of the total daily number of steps are higher with the imputed values.  
+The new mean is 10765.64 and the new media is 10762. 
 
 ***
 # -Are there differences in activity patterns between weekdays and weekends?
 ***
-Add a factor called weekend_indicator with two levels to the data set indicating whether the date is a weekday or a weekend.
+1. Create a new factor variable in the dataset with two levels -- "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+2. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). The plot should look something like the following, which was created using simulated data:
 
 ```r
-# first add a character column for day of the week
-activity_imputed$weekday  <- weekdays(activity_imputed$date)
-# now populate a new factor column using day of the week and a simple function
-activity_imputed$weekend_indicator <- as.factor(apply(activity_imputed["weekday"], 1, function(x) {
-  switch(x,
-         "Sunday" = "weekend",
-         "Saturday" = "weekend",
-         "weekday")
-}))
-# confirm that we have the character and factor types we expect
-str(activity_imputed)
-```
-
-```
-## 'data.frame':	17568 obs. of  8 variables:
-##  $ interval         : int  0 0 0 0 0 0 0 0 0 0 ...
-##  $ steps            : num  1.72 0 0 0 0 ...
-##  $ date             : POSIXct, format: "2012-10-01" "2012-11-23" ...
-##  $ time.x           : POSIXct, format: "2016-12-19 00:00:00" "2016-12-19 00:00:00" ...
-##  $ time.y           : POSIXct, format: "2016-12-19 00:00:00" "2016-12-19 00:00:00" ...
-##  $ average_steps    : num  1.72 1.72 1.72 1.72 1.72 ...
-##  $ weekday          : chr  "Monday" "Friday" "Sunday" "Tuesday" ...
-##  $ weekend_indicator: Factor w/ 2 levels "weekday","weekend": 1 1 2 1 2 1 2 1 1 2 ...
+weeklist <- list("Monday","Tuesday","Wednesday","Thursday","Friday")
+imp_act1$day <- weekdays(as.Date(imp_act1$date))
+imp_act1$day <- factor(imp_act1$day)
+imp_act1$week <- ifelse(imp_act1$day %in% weeklist, "week","weekend")
+imp_act1$week <- factor(imp_act1$week)
 ```
 Now draw a panel plot using ggplot2, comparing activity patterns on weekdays and weekends.
 
 ```r
-average_steps_by_time_weekend <- aggregate(list(average_steps = activity_imputed$steps),
-                                           by=list(time       = activity_imputed$time.x,
-                                                   daytype    = activity_imputed$weekend_indicator),
-                                           FUN=mean)
-library(ggplot2)
-qplot(x = time,
-      y = average_steps,
-      geom="path",
-      data = average_steps_by_time_weekend, 
-      xlab="Time interval",
-      ylab="Average steps",
-      main="Activity Patterns\nWeekdays vs. Weekends",
-      facets = daytype ~ .)
+avg_week_steps <- imp_act1 %>%
+  group_by(interval,week) %>%
+  summarize(mean.steps.week = mean(steps))
+
+aplot2 <- ggplot(avg_week_steps, aes(x = interval, y = mean.steps.week)) + 
+  geom_line() + facet_grid(.~week) + my.axis.font + theme_minimal() +
+  labs(title = "Average Steps Per Day \n by Time Interval \n on the Week and Weekend") + xlab("Time Interval") + 
+     theme(plot.title = element_text(hjust = 0.5)) + my.theme
+aplot2
 ```
 
 <img src="Figs/unnamed-chunk-13-1.png" style="display: block; margin: auto;" />
 
-The histograms will be a little easier to interpret if accompanied by summary statistics, broken out by weekday / weekend.  On average, steps are higher on the weekend, although the maximum for steps is highest on weekday mornings at 8:35.  Weekend activity is more variable (s.d. of steps is higher on the weekend).     
-
-```r
-library(psych)
-by(average_steps_by_time_weekend,
-   average_steps_by_time_weekend$daytype,
-   FUN=describe)
-```
-
-```
-## average_steps_by_time_weekend$daytype: weekday
-##               vars   n  mean    sd median trimmed   mad min    max  range
-## time*            1 288   NaN    NA     NA     NaN    NA Inf   -Inf   -Inf
-## daytype*         2 288  1.00  0.00    1.0    1.00  0.00   1   1.00   0.00
-## average_steps    3 288 35.61 41.62   25.8   28.33 35.23   0 230.38 230.38
-##               skew kurtosis   se
-## time*           NA       NA   NA
-## daytype*       NaN      NaN 0.00
-## average_steps 2.09     5.49 2.45
-## -------------------------------------------------------- 
-## average_steps_by_time_weekend$daytype: weekend
-##               vars   n  mean    sd median trimmed   mad min    max  range
-## time*            1 288   NaN    NA     NA     NaN    NA Inf   -Inf   -Inf
-## daytype*         2 288  2.00  0.00   2.00    2.00  0.00   2   2.00   0.00
-## average_steps    3 288 42.37 42.54  32.34   37.11 46.91   0 166.64 166.64
-##               skew kurtosis   se
-## time*           NA       NA   NA
-## daytype*       NaN      NaN 0.00
-## average_steps 0.79    -0.34 2.51
-```
 ***
