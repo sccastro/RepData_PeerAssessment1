@@ -201,7 +201,7 @@ avg_week_steps <- imp_act1 %>%
   summarize(mean.steps.week = mean(steps))
 
 aplot2 <- ggplot(avg_week_steps, aes(x = interval, y = mean.steps.week)) + 
-  geom_line() + facet_grid(.~week) + my.axis.font + theme_minimal() +
+  geom_line() + facet_grid(week~.) + my.axis.font + theme_minimal() +
   labs(title = "Average Steps Per Day \n by Time Interval \n on the Week and Weekend") + xlab("Time Interval") + 
      theme(plot.title = element_text(hjust = 0.5)) + my.theme
 aplot2
